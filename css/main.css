@@ -91,7 +91,7 @@ body {
 
 .main-section {
     /*background: linear-gradient(180deg, #5849FF 0%, #4C1C88 48.27%, #24155B 100%);*/
-    background-image: url("/image/Slider_illustration.svg");
+    background-image: url("../image/Slider_illustration.svg");
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center;
