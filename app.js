@@ -579,6 +579,8 @@ function start(me, db, room) {
 
   $("#peerName").textContent = peerInfo.name;
   setAvatar($("#avatar"), peerInfo);
+  setAvatar($("#meAvatar"), me);
+  $("#meAvatar").title = "Sən: " + me.name;
   function showPeer() {
     const stEl = $("#peerStatus");
     if (!peer) { stEl.textContent = "hələ qoşulmayıb"; return; }
@@ -589,58 +591,57 @@ function start(me, db, room) {
   }
   setInterval(showPeer, 5000);
 
-  // ----- giriş / çıxış tarixçəsi -----
-  let inside = false;
-  let dev = store("chat_dev");
-  if (!dev) { dev = rid(); store("chat_dev", dev); }
-  const br = browserLabel();
-  let ipP = null;
-  const getIp = () => (ipP ||= fetch("https://api.ipify.org?format=json", AbortSignal.timeout ? { signal: AbortSignal.timeout(5000) } : {})
-    .then((r) => r.json()).then((j) => j.ip || null).catch(() => { ipP = null; return null; }));
+  try {
+    // ----- giriş / çıxış tarixçəsi -----
+    let inside = false;
+    let dev = store("chat_dev");
+    if (!dev) { dev = rid(); store("chat_dev", dev); }
+    const br = browserLabel();
+    let ipP = null;
+    const getIp = () => (ipP ||= fetch("https://api.ipify.org?format=json", AbortSignal.timeout ? { signal: AbortSignal.timeout(5000) } : {})
+      .then((r) => r.json()).then((j) => j.ip || null).catch(() => { ipP = null; return null; }));
 
-  function logVisit(type) {
-    if ((type === "in") === inside) return;   // eyni hadisəni iki dəfə yazma
-    inside = type === "in";
-    const at = Date.now();
-    if (type === "out") { addDoc(visitCol, { uid: me.uid, name: me.name, dev, type, at }).catch(() => {}); return; }
-    getIp().then((ip) => addDoc(visitCol, { uid: me.uid, name: me.name, dev, type, at, ip, br }).catch(() => {}));
-  }
-  if (document.visibilityState === "visible") logVisit("in");
-
-  // ----- yeni IP / brauzer qeydiyyatı -----
-  const slug = (x) => String(x).replace(/[^\w.-]+/g, "_").slice(0, 100);
-  async function registerDevice() {
-    const ip = await getIp();
-    const items = [["br", br]];
-    if (ip) items.push(["ip", ip]);
-    for (const [type, value] of items) {
-      const ref = doc(devCol, me.uid + "_" + type + "_" + slug(value));
-      try {
-        const snap = await getDoc(ref);
-        if (!snap.exists()) await setDoc(ref, { uid: me.uid, type, value, ip: ip || null, br, first: Date.now() });
-      } catch (e) { console.warn(e); }
+    function logVisit(type) {
+      if ((type === "in") === inside) return;   // eyni hadisəni iki dəfə yazma
+      inside = type === "in";
+      const at = Date.now();
+      if (type === "out") { addDoc(visitCol, { uid: me.uid, name: me.name, dev, type, at }).catch(() => {}); return; }
+      getIp().then((ip) => addDoc(visitCol, { uid: me.uid, name: me.name, dev, type, at, ip, br }).catch(() => {}));
     }
-  }
-  registerDevice();
+    if (document.visibilityState === "visible") logVisit("in");
 
-// Qeyd: IP/brauzer və giriş məlumatları səssiz yazılır (yalnız sahib üçün hesabat), çatda görünmür.
+    // ----- yeni IP / brauzer qeydiyyatı -----
+    const slug = (x) => String(x).replace(/[^\w.-]+/g, "_").slice(0, 100);
+    async function registerDevice() {
+      const ip = await getIp();
+      const items = [["br", br]];
+      if (ip) items.push(["ip", ip]);
+      for (const [type, value] of items) {
+        const ref = doc(devCol, me.uid + "_" + type + "_" + slug(value));
+        try {
+          const snap = await getDoc(ref);
+          if (!snap.exists()) await setDoc(ref, { uid: me.uid, type, value, ip: ip || null, br, first: Date.now() });
+        } catch (e) { console.warn(e); }
+      }
+    }
+    registerDevice();
 
-  beat();
-  setInterval(() => { if (document.visibilityState === "visible") beat(); }, 30000);
-  document.addEventListener("visibilitychange", () => {
-    const vis = document.visibilityState === "visible";
-    if (!vis) typingOn = false;
-    logVisit(vis ? "in" : "out");
+  // Qeyd: IP/brauzer və giriş məlumatları səssiz yazılır (yalnız sahib üçün hesabat), çatda görünmür.
+
     beat();
-    markSeen();
-  });
-  window.addEventListener("focus", markSeen);
-  window.addEventListener("blur", updateTitle);
-  window.addEventListener("pagehide", () => { logVisit("out"); beat({ online: false, typing: false }); });
-  window.addEventListener("pageshow", (e) => { if (e.persisted && document.visibilityState === "visible") { logVisit("in"); beat(); } });
-
-  setAvatar($("#meAvatar"), me);
-  $("#meAvatar").title = "Sən: " + me.name;
+    setInterval(() => { if (document.visibilityState === "visible") beat(); }, 30000);
+    document.addEventListener("visibilitychange", () => {
+      const vis = document.visibilityState === "visible";
+      if (!vis) typingOn = false;
+      logVisit(vis ? "in" : "out");
+      beat();
+      markSeen();
+    });
+    window.addEventListener("focus", markSeen);
+    window.addEventListener("blur", updateTitle);
+    window.addEventListener("pagehide", () => { logVisit("out"); beat({ online: false, typing: false }); });
+    window.addEventListener("pageshow", (e) => { if (e.persisted && document.visibilityState === "visible") { logVisit("in"); beat(); } });
+  } catch (e) { console.error('analytics', e); }
 
   subscribe();
 }
