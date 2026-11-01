@@ -105,8 +105,8 @@ function browserLabel() {
 
 // ---------- iki nəfər: Elish və Nurush ----------
 const PEOPLE = {
-  elish:  { uid: "elish",  name: "Elish",  avatar: "elish.svg",  photo: "elish.jpg" },
-  nurush: { uid: "nurush", name: "Nurush", avatar: "nurush.svg", photo: "nurush.jpg" }
+  elish:  { uid: "elish",  name: "Elish",  avatar: "elish.svg",  photo: "elish.jpg?v=2" },
+  nurush: { uid: "nurush", name: "Nurush", avatar: "nurush.svg", photo: "nurush.jpg?v=2" }
 };
 // Profil şəklini qoy: əvvəl çəkilmiş SVG görünür, foto yüklənsə onunla əvəzlənir (yüklənməsə SVG qalır)
 function setAvatar(el, person) {
