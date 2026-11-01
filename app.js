@@ -202,29 +202,38 @@ function start(me, db, room) {
   emptyEl.textContent = "Hələ mesaj yoxdur. İlk mesajı yaz 👋  Linki qarşı tərəfə göndər ki, o da qoşulsun.";
 
   // ----- mesajlara abunə -----
+  let gotSnap = false, retryT = null;
+  function docToMsg(d) {
+    const v = d.data() || {};
+    if (typeof v.text !== "string") return null;
+    return { id: d.id, text: v.text, uid: v.uid, name: v.name, ts: v.ts || 0,
+      img: v.img || null, w: v.w || 0, h: v.h || 0, thumb: v.thumb || "",
+      delivered: !!v.deliveredAt, read: !!v.readAt, pending: d.metadata ? d.metadata.hasPendingWrites : false };
+  }
+  function applySnap(snap) {
+    gotSnap = true;
+    const arr = [];
+    snap.forEach((d) => { const m = docToMsg(d); if (m) arr.push(m); });
+    arr.sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1));
+    hasMore = snap.size >= pageSize;
+    msgs = arr;
+    try { render(); } catch (e) { console.error("render", e); }
+    try { markSeen(); } catch (e) { console.error("markSeen", e); }
+  }
   function subscribe() {
-    if (unsub) unsub();
+    if (unsub) { try { unsub(); } catch {} unsub = null; }
     const q = query(msgCol, orderBy("ts", "desc"), limit(pageSize));
-    unsub = onSnapshot(q, { includeMetadataChanges: true }, (snap) => {
-      const arr = [];
-      snap.forEach((d) => {
-        const v = d.data();
-        if (typeof v.text !== "string") return;
-        arr.push({ id: d.id, text: v.text, uid: v.uid, name: v.name, ts: v.ts || 0,
-          img: v.img || null, w: v.w || 0, h: v.h || 0, thumb: v.thumb || "",
-          delivered: !!v.deliveredAt, read: !!v.readAt, pending: d.metadata.hasPendingWrites });
-      });
-      arr.sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1));
-      hasMore = snap.size >= pageSize;
-      msgs = arr;
-      try { render(); } catch (e) { console.error("render", e); }
-      try { markSeen(); } catch (e) { console.error("markSeen", e); }
-    }, (err) => {
+    unsub = onSnapshot(q, { includeMetadataChanges: true }, applySnap, (err) => {
       console.warn("messages", err.code || err.message);
-      // Qısa internet kəsilmələrində xəta göstərmə; özü yenidən qoşulur.
-      if (err.code === "permission-denied") toast("İcazə xətası");
-      else setTimeout(() => { if (!unsub) subscribe(); }, 4000);
+      if (err.code === "permission-denied") { toast("İcazə xətası"); return; }
+      // real-time ilişsə: bağla və bir az sonra yenidən qoşul
+      try { if (unsub) unsub(); } catch {}
+      unsub = null;
+      clearTimeout(retryT);
+      retryT = setTimeout(subscribe, 3000);
     });
+    // Ehtiyat: real-time dinləyici gec/işləməzsə, mesajları bir dəfə birbaşa gətir
+    getDocs(q).then((snap) => { if (!gotSnap) applySnap(snap); }).catch(() => {});
   }
 
   function loadOlder() {
@@ -643,5 +652,8 @@ function start(me, db, room) {
     window.addEventListener("pageshow", (e) => { if (e.persisted && document.visibilityState === "visible") { logVisit("in"); beat(); } });
   } catch (e) { console.error('analytics', e); }
 
+  try { render(); } catch (e) { console.error("render0", e); }   // dərhal boş ekranı çək (ağ qalmasın)
   subscribe();
+  // Son ehtiyat: 4 saniyə ərzində heç nə gəlməsə, mesajları birbaşa gətir
+  setTimeout(() => { if (!gotSnap) getDocs(query(msgCol, orderBy("ts", "desc"), limit(pageSize))).then(applySnap).catch(() => {}); }, 4000);
 }
