@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  initializeFirestore, memoryLocalCache,
   collection, doc, addDoc, setDoc, getDoc, getDocs, query, where, orderBy, limit, onSnapshot,
   serverTimestamp, writeBatch, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -135,9 +135,10 @@ async function boot() {
   const room = ((params.get("r") || cfg.room || "main").replace(/[^\w-]/g, "").slice(0, 60)) || "main";
 
   const app = initializeApp(cfg.firebase);
+  // Yaddaş-keş (IndexedDB yox) — iPhone-da ilişmə/boş ekran problemini aradan qaldırır
   let db;
   try {
-    db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+    db = initializeFirestore(app, { localCache: memoryLocalCache() });
   } catch {
     db = initializeFirestore(app, {});
   }
