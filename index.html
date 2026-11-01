@@ -11,19 +11,15 @@
 <body>
   <div id="app">
     <header class="top">
-      <button class="peer" id="peerInfo" title="Hesabat">
+      <div class="peer">
         <div class="avatar" id="avatar">?</div>
         <div class="who">
           <div class="name" id="peerName">Gözlənilir…</div>
           <div class="status" id="peerStatus">qoşulur…</div>
         </div>
-      </button>
+      </div>
       <div class="avatar me-avatar" id="meAvatar"></div>
     </header>
-
-    <div id="alert" class="alert" hidden>
-      <span>⚠️</span><div id="alertText"></div><button id="alertOk">Gördüm</button>
-    </div>
 
     <main id="list" class="list">
       <div id="items" class="items"></div>
@@ -58,17 +54,6 @@
     <div class="card">
       <h2>Quraşdırma lazımdır</h2>
       <p><code>config.js</code> faylına Firebase məlumatlarını yaz. Addımlar <code>README.md</code>-dədir.</p>
-    </div>
-  </div>
-
-  <!-- Giriş / çıxış tarixçəsi -->
-  <div id="history" class="modal" hidden>
-    <div class="card history-card">
-      <div class="h-head">
-        <h2 id="historyTitle">Giriş / çıxış</h2>
-        <button id="historyClose" class="icon-btn" aria-label="Bağla">✕</button>
-      </div>
-      <div id="historyList" class="h-list"></div>
     </div>
   </div>
 

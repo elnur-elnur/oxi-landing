@@ -5,19 +5,19 @@ Link: **https://menim-icadim.web.app** (dəyişmir). Linki ilk açan cihaz avtom
 Heç nə soruşulmur: Elish tutulandan sonra linki açan hər yeni cihaz avtomatik Nurush olur.
 Elish öz başqa cihazından girmək üçün linkin sonuna `#elish` yazır (bir dəfə; sonra yadda qalır).
 
-**Hesabat:** yuxarıda qarşı tərəfin adına toxun — neçə dəfə girib, nə qədər qalıb, neçə mesaj oxuyub, hansı mesajlar oxunmayıb.
-Terminaldan: `python3 tools/report.py` (gcloud application-default girişi lazımdır).
-
 - ✓ göndərildi, ✓✓ çatdırıldı, **mavi ✓✓ oxundu** (WhatsApp kimi)
 - "onlayn", "yazır…", "son görülmə" statusu
 - Uzun mesajlar (100 000 simvola qədər); 1500 simvoldan uzunlar "Daha çox oxu ▼" ilə açılır, "Bağla ▲" ilə yığılır
-- Nurush yeni IP-dən və ya yeni brauzerdən girəndə Elish-ə xəbərdarlıq çıxır (bloklanmır)
+
 - 40 smaylik paneli
 - 📎 **Şəkil göndərmək** (bir neçəsini birdən, şəkil altı yazı ilə; kompüterdə Ctrl+V ilə yapışdırmaq və sürükləyib atmaq da olur). Şəkillər avtomatik sıxılır, toxunanda tam ekranda açılır
 - **Giriş / çıxış tarixçəsi:** yuxarıda qarşı tərəfin adına toxun — nə vaxt girib, nə vaxt çıxıb, neçə dəqiqə qalıb görünür
 - Mesajlar silinmir (verilənlər bazası qaydaları silməyə icazə vermir)
 - Tez işləyir: son 60 mesaj yüklənir, yuxarı sürüşdürdükcə köhnələr gəlir; mesajlar telefonda keşlənir
 - Linklər kliklənir, gecə rejimi avtomatik
+- Oflayn dayanıqlıdır: internet kəsiləndə mesaj saat işarəsi ilə növbəyə düşür, qoşulanda avtomatik gedir (donma/xəta olmur)
+
+**Gizli hesabat (yalnız sahib üçün):** çatda IP və ya hər hansı izləmə məlumatı **görünmür** — hər iki tərəf yalnız adi onlayn/yazır/son görülmə statusunu görür. Giriş-çıxış, oxuma, IP və brauzer məlumatları bazada səssiz saxlanılır və yalnız sahib `tools/report.py` ilə (gcloud application-default girişi lazımdır) görə bilər.
 
 Şəkillər də Firestore-da saxlanılır (Firebase Storage pullu plan istədiyi üçün istifadə olunmur), ona görə əlavə heç nə qurmaq lazım deyil.
 
