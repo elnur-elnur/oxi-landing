@@ -105,19 +105,21 @@ function browserLabel() {
 
 // ---------- iki nəfər: Elish və Nurush ----------
 const PEOPLE = {
-  elish:  { uid: "elish",  name: "Elish",  avatar: "elish.svg",  photo: "elish.jpg?v=2" },
-  nurush: { uid: "nurush", name: "Nurush", avatar: "nurush.svg", photo: "nurush.jpg?v=2" }
+  elish:  { uid: "elish",  name: "Elish",  avatar: "elish.svg",  photo: "elish.jpg?v=3" },
+  nurush: { uid: "nurush", name: "Nurush", avatar: "nurush.svg", photo: "nurush.jpg?v=3" }
 };
-// Profil şəklini qoy: əvvəl çəkilmiş SVG görünür, foto yüklənsə onunla əvəzlənir (yüklənməsə SVG qalır)
+// Profil şəkli: əsl foto <img> kimi qoyulur; yüklənməsə çəkilmiş SVG-yə qayıdır (boş qalmır)
 function setAvatar(el, person) {
   el.textContent = "";
-  el.style.backgroundImage = `url("${person.avatar}")`;
-  if (!person.photo) return;
-  const probe = new Image();
-  try { probe.referrerPolicy = "no-referrer"; } catch {}
-  probe.onload = () => { el.style.backgroundImage = `url("${person.photo}")`; };
-  probe.onerror = () => {};
-  probe.src = person.photo;
+  el.style.backgroundImage = `url("${person.avatar}")`;   // foto yüklənənə qədər SVG
+  const img = document.createElement("img");
+  img.className = "ava-img";
+  img.alt = "";
+  img.decoding = "async";
+  try { img.referrerPolicy = "no-referrer"; } catch {}
+  img.onerror = () => { img.remove(); };                   // xəta olsa SVG arxa fonda qalır
+  img.src = person.photo || person.avatar;
+  el.appendChild(img);
 }
 const other = (uid) => (uid === "elish" ? PEOPLE.nurush : PEOPLE.elish);
 
