@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="75%">
+      <stop offset="0" stop-color="#fff0f5"/>
+      <stop offset="1" stop-color="#f7c6d9"/>
+    </radialGradient>
+    <radialGradient id="petal" cx="45%" cy="40%" r="65%">
+      <stop offset="0" stop-color="#ffd1e1"/>
+      <stop offset=".6" stop-color="#f48fb1"/>
+      <stop offset="1" stop-color="#d9547f"/>
+    </radialGradient>
+    <radialGradient id="petal2" cx="45%" cy="40%" r="65%">
+      <stop offset="0" stop-color="#ffe3ec"/>
+      <stop offset=".6" stop-color="#f8a5c2"/>
+      <stop offset="1" stop-color="#e06a93"/>
+    </radialGradient>
+    <g id="rose">
+      <circle r="30" fill="url(#petal)"/>
+      <path d="M-28 -6 C-24 -26 -4 -32 10 -26 C-6 -24 -18 -16 -20 2 Z" fill="#e2779d" opacity=".75"/>
+      <path d="M28 6 C24 26 4 32 -10 26 C6 24 18 16 20 -2 Z" fill="#e2779d" opacity=".75"/>
+      <path d="M-20 14 C-10 30 14 28 22 12" fill="none" stroke="#c94a76" stroke-width="2" stroke-linecap="round"/>
+      <path d="M-16 -14 C-4 -24 16 -18 18 -4" fill="none" stroke="#c94a76" stroke-width="2" stroke-linecap="round"/>
+      <path d="M-10 4 C-12 -10 6 -14 10 -4 C14 6 2 14 -4 8 C-8 4 -4 -4 2 -2" fill="none" stroke="#b83c68" stroke-width="2.4" stroke-linecap="round"/>
+    </g>
+    <g id="leaf">
+      <path d="M0 0 C10 -14 30 -14 40 0 C30 14 10 14 0 0 Z" fill="#5fae6e"/>
+      <path d="M2 0 H38" stroke="#3e8a4e" stroke-width="1.6"/>
+    </g>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg)"/>
+  <use href="#leaf" transform="translate(34 132) rotate(160)"/>
+  <use href="#leaf" transform="translate(150 150) rotate(20)"/>
+  <use href="#leaf" transform="translate(120 60) rotate(-60)"/>
+  <use href="#leaf" transform="translate(70 168) rotate(110)"/>
+  <!-- small blossoms -->
+  <g fill="#fff" opacity=".9">
+    <g transform="translate(36 46)"><circle r="6" cx="0" cy="-7"/><circle r="6" cx="7" cy="-2"/><circle r="6" cx="4" cy="6"/><circle r="6" cx="-4" cy="6"/><circle r="6" cx="-7" cy="-2"/><circle r="3.2" fill="#f6c34a"/></g>
+    <g transform="translate(168 112) scale(.8)"><circle r="6" cx="0" cy="-7"/><circle r="6" cx="7" cy="-2"/><circle r="6" cx="4" cy="6"/><circle r="6" cx="-4" cy="6"/><circle r="6" cx="-7" cy="-2"/><circle r="3.2" fill="#f6c34a"/></g>
+  </g>
+  <use href="#rose" transform="translate(70 86) scale(1.05)"/>
+  <use href="#rose" transform="translate(132 96) rotate(40) scale(.95)"/>
+  <g transform="translate(100 140) rotate(-20) scale(1.1)">
+    <circle r="30" fill="url(#petal2)"/>
+    <path d="M-28 -6 C-24 -26 -4 -32 10 -26 C-6 -24 -18 -16 -20 2 Z" fill="#ea8aac" opacity=".75"/>
+    <path d="M28 6 C24 26 4 32 -10 26 C6 24 18 16 20 -2 Z" fill="#ea8aac" opacity=".75"/>
+    <path d="M-20 14 C-10 30 14 28 22 12" fill="none" stroke="#d05c86" stroke-width="2" stroke-linecap="round"/>
+    <path d="M-16 -14 C-4 -24 16 -18 18 -4" fill="none" stroke="#d05c86" stroke-width="2" stroke-linecap="round"/>
+    <path d="M-10 4 C-12 -10 6 -14 10 -4 C14 6 2 14 -4 8 C-8 4 -4 -4 2 -2" fill="none" stroke="#c44b77" stroke-width="2.4" stroke-linecap="round"/>
+  </g>
+</svg>

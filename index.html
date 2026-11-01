@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#008069">
-  <title>Çat</title>
+  <title>Elish & Nurush</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -18,9 +18,7 @@
           <div class="status" id="peerStatus">qoşulur…</div>
         </div>
       </button>
-      <button class="icon-btn" id="renameBtn" title="Adımı dəyiş" aria-label="Adımı dəyiş">
-        <svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
-      </button>
+      <div class="avatar me-avatar" id="meAvatar"></div>
     </header>
 
     <main id="list" class="list">
@@ -51,14 +49,16 @@
     </footer>
   </div>
 
-  <!-- Ad soruşan pəncərə -->
-  <div id="nameModal" class="modal" hidden>
-    <form id="nameForm" class="card">
-      <h2>Adın nədir?</h2>
-      <p>Qarşı tərəf səni bu adla görəcək.</p>
-      <input id="nameInput" maxlength="30" placeholder="Məs: Elnur" required autocomplete="off">
-      <button type="submit">Davam et</button>
-    </form>
+  <!-- Yalnız yeni cihazda, ikisi də artıq tutulubsa -->
+  <div id="roleModal" class="modal" hidden>
+    <div class="card">
+      <h2>Sən kimsən?</h2>
+      <p>Bu cihazda ilk dəfə girirsən.</p>
+      <div class="roles">
+        <button data-role="elish"><span class="avatar" style="background-image:url(elish.svg)"></span>Elish</button>
+        <button data-role="nurush"><span class="avatar" style="background-image:url(nurush.svg)"></span>Nurush</button>
+      </div>
+    </div>
   </div>
 
   <!-- Firebase qurulmayıbsa -->

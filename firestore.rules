@@ -27,6 +27,14 @@ service cloud.firestore {
       allow create: if request.resource.data.type in ['in', 'out'] && request.resource.data.at is number;
       allow update, delete: if false;
     }
+    // Kim Elish, kim Nurush: bir dəfə tutulur, sonra dəyişmək olmaz
+    match /rooms/{room}/meta/{id} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if request.resource.data.diff(resource.data).changedKeys().size() == 0
+                    && request.resource.data.diff(resource.data).removedKeys().size() == 0;
+      allow delete: if false;
+    }
     // Onlayn / yazır… statusu
     match /rooms/{room}/presence/{uid} {
       allow read, write: if true;

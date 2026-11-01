@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   collection, doc, addDoc, setDoc, getDoc, getDocs, query, orderBy, limit, onSnapshot,
-  serverTimestamp, writeBatch
+  serverTimestamp, writeBatch, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const $ = (s) => document.querySelector(s);
@@ -92,30 +92,21 @@ function icon(kind) {
   return s;
 }
 
+// ---------- iki nəfər: Elish və Nurush ----------
+const PEOPLE = {
+  elish:  { uid: "elish",  name: "Elish",  avatar: "elish.svg" },
+  nurush: { uid: "nurush", name: "Nurush", avatar: "nurush.svg" }
+};
+const other = (uid) => (uid === "elish" ? PEOPLE.nurush : PEOPLE.elish);
+
 // ---------- başlanğıc ----------
 if (!cfg.firebase || !cfg.firebase.apiKey) {
   $("#setup").hidden = false;
 } else {
-  let me = store("chat_me");
-  if (me && me.uid && me.name) start(me);
-  else askName((name) => { me = { uid: (me && me.uid) || rid(), name }; store("chat_me", me); start(me); });
+  boot();
 }
 
-function askName(done, current = "") {
-  const modal = $("#nameModal"), input = $("#nameInput"), form = $("#nameForm");
-  input.value = current;
-  modal.hidden = false;
-  setTimeout(() => input.focus(), 50);
-  form.onsubmit = (e) => {
-    e.preventDefault();
-    const name = input.value.trim().slice(0, 30);
-    if (!name) return;
-    modal.hidden = true;
-    done(name);
-  };
-}
-
-function start(me) {
+async function boot() {
   const params = new URLSearchParams(location.search);
   const room = ((params.get("r") || cfg.room || "main").replace(/[^\w-]/g, "").slice(0, 60)) || "main";
 
@@ -126,6 +117,40 @@ function start(me) {
   } catch {
     db = initializeFirestore(app, {});
   }
+
+  const key = "chat_role_" + room;
+  let role = store(key);
+  if (!PEOPLE[role]) {
+    // İlk girən Elish, ikinci girən Nurush olur
+    try {
+      role = await runTransaction(db, async (tx) => {
+        const ref = doc(db, "rooms", room, "meta", "roles");
+        const snap = await tx.get(ref);
+        const taken = snap.exists() ? snap.data() : {};
+        const pick = !taken.elish ? "elish" : !taken.nurush ? "nurush" : null;
+        if (pick) tx.set(ref, { [pick]: Date.now() }, { merge: true });
+        return pick;
+      });
+    } catch (e) { console.warn(e); role = null; }
+    // İkisi də artıq tutulubsa (məs. yeni telefon) — kim olduğunu soruş
+    if (!role) role = await pickRole();
+    store(key, role);
+  }
+  start(PEOPLE[role], db, room);
+}
+
+function pickRole() {
+  return new Promise((resolve) => {
+    const modal = $("#roleModal");
+    modal.hidden = false;
+    modal.querySelectorAll("[data-role]").forEach((b) => {
+      b.onclick = () => { modal.hidden = true; resolve(b.dataset.role); };
+    });
+  });
+}
+
+function start(me, db, room) {
+  const peerInfo = other(me.uid);
 
   const msgCol = collection(db, "rooms", room, "messages");
   const presCol = collection(db, "rooms", room, "presence");
@@ -294,7 +319,7 @@ function start(me) {
 
   function updateTitle() {
     const unread = msgs.filter((m) => m.uid !== me.uid && !m.read).length;
-    document.title = unread && !isActive() ? `(${unread}) Yeni mesaj` : "Çat";
+    document.title = unread && !isActive() ? `(${unread}) Yeni mesaj` : "Elish & Nurush";
   }
 
   // ----- çatdırıldı / oxundu -----
@@ -517,27 +542,17 @@ function start(me) {
   }
 
   let peer = null;
-  onSnapshot(presCol, (snap) => {
-    let best = null;
-    snap.forEach((d) => {
-      if (d.id === me.uid) return;
-      const v = d.data();
-      if (!best || (v.at || 0) > (best.at || 0)) best = v;
-    });
-    peer = best;
+  onSnapshot(doc(presCol, peerInfo.uid), (d) => {
+    peer = d.exists() ? d.data() : null;
     showPeer();
   }, () => {});
 
+  $("#peerName").textContent = peerInfo.name;
+  $("#avatar").style.backgroundImage = `url(${peerInfo.avatar})`;
+  $("#avatar").textContent = "";
   function showPeer() {
-    const nameEl = $("#peerName"), stEl = $("#peerStatus"), av = $("#avatar");
-    if (!peer) {
-      nameEl.textContent = "Gözlənilir…";
-      stEl.textContent = "Linki qarşı tərəfə göndər";
-      av.textContent = "?";
-      return;
-    }
-    nameEl.textContent = peer.name || "Qonaq";
-    av.textContent = (peer.name || "?").trim().charAt(0).toUpperCase();
+    const stEl = $("#peerStatus");
+    if (!peer) { stEl.textContent = "hələ qoşulmayıb"; return; }
     const age = Date.now() - (peer.at || 0);
     if (peer.typing && age < 8000) stEl.textContent = "yazır…";
     else if (peer.online && age < 70000) stEl.textContent = "onlayn";
@@ -557,12 +572,12 @@ function start(me) {
   async function openHistory() {
     const box = $("#historyList");
     $("#history").hidden = false;
-    $("#historyTitle").textContent = (peer && peer.name ? peer.name : "Qarşı tərəf") + " — giriş / çıxış";
+    $("#historyTitle").textContent = peerInfo.name + " — giriş / çıxış";
     box.textContent = "Yüklənir…";
     try {
       const snap = await getDocs(query(visitCol, orderBy("at", "desc"), limit(300)));
       const rows = [];
-      snap.forEach((d) => { const v = d.data(); if (v.uid !== me.uid) rows.push(v); });
+      snap.forEach((d) => { const v = d.data(); if (v.uid === peerInfo.uid) rows.push(v); });
       box.textContent = "";
       if (!rows.length) { box.textContent = "Hələ qeyd yoxdur."; return; }
       let day = null;
@@ -610,9 +625,8 @@ function start(me) {
   window.addEventListener("pagehide", () => { logVisit("out"); beat({ online: false, typing: false }); });
   window.addEventListener("pageshow", (e) => { if (e.persisted && document.visibilityState === "visible") { logVisit("in"); beat(); } });
 
-  $("#renameBtn").addEventListener("click", () => {
-    askName((name) => { me.name = name; store("chat_me", me); beat(); toast("Adın dəyişdi: " + name); }, me.name);
-  });
+  $("#meAvatar").style.backgroundImage = `url(${me.avatar})`;
+  $("#meAvatar").title = "Sən: " + me.name;
 
   subscribe();
 }

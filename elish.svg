@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="sky" cx="50%" cy="35%" r="75%">
+      <stop offset="0" stop-color="#3b4a6b"/>
+      <stop offset="1" stop-color="#121a2c"/>
+    </radialGradient>
+    <radialGradient id="moon" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fffbe6"/>
+      <stop offset="1" stop-color="#e9dfb8"/>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#sky)"/>
+  <circle cx="150" cy="48" r="26" fill="url(#moon)" opacity=".95"/>
+  <g fill="#fff" opacity=".8">
+    <circle cx="30" cy="30" r="1.4"/><circle cx="62" cy="18" r="1"/><circle cx="96" cy="40" r="1.2"/>
+    <circle cx="20" cy="76" r="1"/><circle cx="182" cy="96" r="1.2"/><circle cx="118" cy="14" r="1"/>
+  </g>
+  <!-- wolf head, low-poly -->
+  <g stroke="#0d1220" stroke-width=".6" stroke-linejoin="round">
+    <!-- ears -->
+    <polygon points="52,52 76,96 46,104" fill="#5d6678"/>
+    <polygon points="58,64 72,94 52,98" fill="#2b3140"/>
+    <polygon points="148,52 154,104 124,96" fill="#5d6678"/>
+    <polygon points="142,64 148,98 128,94" fill="#2b3140"/>
+    <!-- forehead -->
+    <polygon points="76,96 100,84 124,96 100,118" fill="#7b8496"/>
+    <polygon points="46,104 76,96 100,118 70,132" fill="#636c7f"/>
+    <polygon points="154,104 130,132 100,118 124,96" fill="#566073"/>
+    <!-- cheeks / ruff -->
+    <polygon points="46,104 70,132 58,160 36,140" fill="#4a5265"/>
+    <polygon points="154,104 164,140 142,160 130,132" fill="#3f4759"/>
+    <polygon points="70,132 84,150 76,176 58,160" fill="#c9ced8"/>
+    <polygon points="130,132 142,160 124,176 116,150" fill="#b5bbc7"/>
+    <!-- muzzle -->
+    <polygon points="100,118 116,150 100,162 84,150" fill="#e3e6ec"/>
+    <polygon points="70,132 100,118 84,150" fill="#9aa2b2"/>
+    <polygon points="130,132 116,150 100,118" fill="#8a92a3"/>
+    <polygon points="84,150 100,162 100,186 76,176" fill="#f2f3f6"/>
+    <polygon points="116,150 124,176 100,186 100,162" fill="#dde0e7"/>
+  </g>
+  <!-- eyes -->
+  <polygon points="78,118 92,122 82,127" fill="#f5b52e"/>
+  <polygon points="122,118 108,122 118,127" fill="#f5b52e"/>
+  <circle cx="85" cy="122.5" r="1.8" fill="#111"/>
+  <circle cx="115" cy="122.5" r="1.8" fill="#111"/>
+  <!-- nose -->
+  <polygon points="92,156 108,156 100,166" fill="#14161c"/>
+  <path d="M100 166 v8 M100 174 l-7 4 M100 174 l7 4" stroke="#14161c" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>

@@ -1,6 +1,8 @@
 # 💬 Çat — 2 nəfərlik WhatsApp kimi mesajlaşma
 
-Bir səhifəlik, login/parolsuz çat. Linkə basan adını yazır və dərhal yazışır.
+Bir səhifəlik, login/parolsuz, yalnız iki nəfərlik çat: **Elish** 🐺 və **Nurush** 🌹.
+Linki ilk açan cihaz avtomatik Elish olur, ikinci açan Nurush. Ad və profil şəkli sabitdir, dəyişdirilmir.
+Yeni cihazdan girəndə (ikisi də artıq tutulubsa) bir dəfə "Sən kimsən?" soruşulur.
 
 - ✓ göndərildi, ✓✓ çatdırıldı, **mavi ✓✓ oxundu** (WhatsApp kimi)
 - "onlayn", "yazır…", "son görülmə" statusu
