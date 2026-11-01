@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  collection, doc, addDoc, setDoc, getDoc, getDocs, query, orderBy, limit, onSnapshot,
+  collection, doc, addDoc, setDoc, getDoc, getDocs, query, where, orderBy, limit, onSnapshot,
   serverTimestamp, writeBatch, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -120,33 +120,23 @@ async function boot() {
 
   const key = "chat_role_" + room;
   let role = store(key);
+  // Elish-in öz digər cihazları üçün: linkin sonuna #elish
+  if (location.hash === "#elish") { role = "elish"; history.replaceState(null, "", location.pathname + location.search); }
   if (!PEOPLE[role]) {
-    // İlk girən Elish, ikinci girən Nurush olur
+    // Heç nə soruşulmur: ilk girən Elish, ondan sonra girən hər kəs Nurush
     try {
       role = await runTransaction(db, async (tx) => {
         const ref = doc(db, "rooms", room, "meta", "roles");
         const snap = await tx.get(ref);
         const taken = snap.exists() ? snap.data() : {};
-        const pick = !taken.elish ? "elish" : !taken.nurush ? "nurush" : null;
-        if (pick) tx.set(ref, { [pick]: Date.now() }, { merge: true });
+        const pick = !taken.elish ? "elish" : "nurush";
+        if (!taken[pick]) tx.set(ref, { [pick]: Date.now() }, { merge: true });
         return pick;
       });
-    } catch (e) { console.warn(e); role = null; }
-    // İkisi də artıq tutulubsa (məs. yeni telefon) — kim olduğunu soruş
-    if (!role) role = await pickRole();
-    store(key, role);
+    } catch (e) { console.warn(e); role = "nurush"; }
   }
+  store(key, role);
   start(PEOPLE[role], db, room);
-}
-
-function pickRole() {
-  return new Promise((resolve) => {
-    const modal = $("#roleModal");
-    modal.hidden = false;
-    modal.querySelectorAll("[data-role]").forEach((b) => {
-      b.onclick = () => { modal.hidden = true; resolve(b.dataset.role); };
-    });
-  });
 }
 
 function start(me, db, room) {
@@ -562,50 +552,91 @@ function start(me, db, room) {
 
   // ----- giriş / çıxış tarixçəsi -----
   let inside = false;
+  let dev = store("chat_dev");
+  if (!dev) { dev = rid(); store("chat_dev", dev); }
   function logVisit(type) {
     if ((type === "in") === inside) return;   // eyni hadisəni iki dəfə yazma
     inside = type === "in";
-    addDoc(visitCol, { uid: me.uid, name: me.name, type, at: Date.now() }).catch(() => {});
+    addDoc(visitCol, { uid: me.uid, name: me.name, dev, type, at: Date.now() }).catch(() => {});
   }
   if (document.visibilityState === "visible") logVisit("in");
 
   async function openHistory() {
     const box = $("#historyList");
     $("#history").hidden = false;
-    $("#historyTitle").textContent = peerInfo.name + " — giriş / çıxış";
+    $("#historyTitle").textContent = peerInfo.name + " — hesabat";
     box.textContent = "Yüklənir…";
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+    const dur = (ms) => { const m = Math.round(ms / 60000); return m < 1 ? "<1 dəq" : m < 60 ? m + " dəq" : Math.floor(m / 60) + " saat " + (m % 60) + " dəq"; };
     try {
-      const snap = await getDocs(query(visitCol, orderBy("at", "desc"), limit(300)));
-      const rows = [];
-      snap.forEach((d) => { const v = d.data(); if (v.uid === peerInfo.uid) rows.push(v); });
+      const [vs, ms] = await Promise.all([
+        getDocs(query(visitCol, orderBy("at", "desc"), limit(1000))),
+        getDocs(query(msgCol, where("uid", "==", me.uid), limit(2000)))
+      ]);
+      // girişləri sessiyalara çevir: giriş → çıxış
+      const ev = [];
+      vs.forEach((d) => { const v = d.data(); if (v.uid === peerInfo.uid) ev.push(v); });
+      ev.sort((a, b) => a.at - b.at);
+      const now = Date.now();
+      const online = peer && peer.online && now - (peer.at || 0) < 70000;
+      // hər cihaz üçün ayrıca giriş→çıxış cütləri
+      const raw = [], openBy = {};
+      for (const v of ev) {
+        const k = v.dev || "x";
+        if (v.type === "in") { if (openBy[k]) openBy[k].end = openBy[k].end || v.at; openBy[k] = { start: v.at, end: null }; raw.push(openBy[k]); }
+        else if (openBy[k] && !openBy[k].end) { openBy[k].end = v.at; openBy[k] = null; }
+      }
+      const lastStart = raw.length ? Math.max(...raw.map((x) => x.start)) : 0;
+      for (const x of raw) if (!x.end) x.end = online && x.start === lastStart ? now : Math.min(x.start + 3600000, now);
+      // üst-üstə düşənləri birləşdir (eyni anda iki cihaz)
+      raw.sort((a, b) => a.start - b.start);
+      const sessions = [];
+      for (const x of raw) {
+        const last = sessions[sessions.length - 1];
+        if (last && x.start <= last.end) last.end = Math.max(last.end, x.end);
+        else sessions.push({ ...x });
+      }
+      sessions.forEach((x, i) => { x.open = online && i === sessions.length - 1; if (x.open) x.end = now; });
+      // mənim mesajlarım: nə vaxt oxunub
+      const mine = [];
+      ms.forEach((d) => { const v = d.data(); mine.push({ ts: v.ts || 0, read: v.readAt && v.readAt.toMillis ? v.readAt.toMillis() : null }); });
+      const readTimes = mine.filter((m) => m.read).map((m) => m.read);
+      for (const x of sessions) x.reads = 0;
+      for (const t of readTimes) {
+        const x = sessions.find((x) => t >= x.start - 5000 && t <= x.end + 5000);
+        if (x) x.reads++;
+      }
+
+      const dayStart = new Date(new Date().toDateString()).getTime();
+      const weekStart = now - 7 * 86400000;
+      const sum = (from) => { const ss = sessions.filter((x) => x.start >= from); return { n: ss.length, t: ss.reduce((a, x) => a + (x.end - x.start), 0), r: ss.reduce((a, x) => a + x.reads, 0) }; };
+      const today = sum(dayStart), week = sum(weekStart), all = sum(0);
+      const unread = mine.filter((m) => !m.read).length;
+      const lastRead = readTimes.length ? Math.max(...readTimes) : null;
+
       box.textContent = "";
-      if (!rows.length) { box.textContent = "Hələ qeyd yoxdur."; return; }
+      const stats = el("div", "stats");
+      const card = (title, big, small) => { const c = el("div", "stat"); c.append(el("div", "s-big", big), el("div", "s-title", title)); if (small) c.append(el("div", "s-small", small)); stats.append(c); };
+      card("Bu gün", today.n + " dəfə girib", dur(today.t) + " · " + today.r + " mesaj oxuyub");
+      card("Son 7 gün", week.n + " dəfə girib", dur(week.t) + " · " + week.r + " mesaj oxuyub");
+      card("Ümumi", all.n + " dəfə girib", dur(all.t));
+      card("Sənin mesajların", (mine.length - unread) + " / " + mine.length + " oxunub",
+        unread ? unread + " oxunmayıb" : (mine.length ? "hamısı oxunub ✓✓" : ""));
+      box.append(stats);
+      box.append(el("div", "s-line", online ? "🟢 İndi onlayndır" : (peer && peer.at ? "⚪ " + lastSeenLabel(peer.at) : "⚪ Hələ heç girməyib")));
+      if (lastRead) box.append(el("div", "s-line", "👁 Son dəfə mesaj oxuyub: " + dayLabel(lastRead).toLowerCase() + " " + hhmm(lastRead)));
+
+      if (!sessions.length) { box.append(el("div", "s-line", "Giriş qeydi hələ yoxdur.")); return; }
       let day = null;
-      const shown = rows.slice(0, 150);
-      const dur = (ms) => { const m = Math.round(ms / 60000); return m < 1 ? "1 dəq-dən az" : m < 60 ? m + " dəq" : Math.floor(m / 60) + " saat " + (m % 60) + " dəq"; };
-      shown.forEach((v, i) => {
-        const dk = dayKey(v.at);
-        if (dk !== day) {
-          day = dk;
-          const h = document.createElement("div");
-          h.className = "h-day"; h.textContent = dayLabel(v.at);
-          box.append(h);
-        }
-        const r = document.createElement("div");
-        r.className = "h-row " + v.type;
-        const dot = document.createElement("span"); dot.className = "dot";
-        const t = document.createElement("span"); t.textContent = v.type === "in" ? "Girdi" : "Çıxdı";
-        const tm = document.createElement("span"); tm.className = "h-time"; tm.textContent = hhmm(v.at);
-        r.append(dot, t);
-        const prev = shown[i + 1];
-        if (v.type === "out" && prev && prev.type === "in") {
-          const d = document.createElement("span"); d.className = "h-dur"; d.textContent = "· " + dur(v.at - prev.at) + " qaldı";
-          r.append(d);
-        }
-        r.append(tm);
+      for (const x of sessions.slice().reverse().slice(0, 200)) {
+        const dk = dayKey(x.start);
+        if (dk !== day) { day = dk; box.append(el("div", "h-day", dayLabel(x.start))); }
+        const r = el("div", "h-row" + (x.open ? " in" : " out"));
+        r.append(el("span", "dot"), el("span", "", hhmm(x.start) + " – " + (x.open ? "indi" : hhmm(x.end))));
+        r.append(el("span", "h-dur", dur(x.end - x.start) + (x.reads ? " · " + x.reads + " mesaj oxudu" : "")));
         box.append(r);
-      });
-    } catch (e) { box.textContent = "Xəta: " + (e.code || e.message); }
+      }
+    } catch (e) { console.error(e); box.textContent = "Xəta: " + (e.code || e.message); }
   }
   $("#peerInfo").addEventListener("click", openHistory);
   $("#historyClose").addEventListener("click", () => { $("#history").hidden = true; });

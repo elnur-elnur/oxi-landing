@@ -2,7 +2,11 @@
 
 Bir səhifəlik, login/parolsuz, yalnız iki nəfərlik çat: **Elish** 🐺 və **Nurush** 🌹.
 Linki ilk açan cihaz avtomatik Elish olur, ikinci açan Nurush. Ad və profil şəkli sabitdir, dəyişdirilmir.
-Yeni cihazdan girəndə (ikisi də artıq tutulubsa) bir dəfə "Sən kimsən?" soruşulur.
+Heç nə soruşulmur: Elish tutulandan sonra linki açan hər yeni cihaz avtomatik Nurush olur.
+Elish öz başqa cihazından girmək üçün linkin sonuna `#elish` yazır (bir dəfə; sonra yadda qalır).
+
+**Hesabat:** yuxarıda qarşı tərəfin adına toxun — neçə dəfə girib, nə qədər qalıb, neçə mesaj oxuyub, hansı mesajlar oxunmayıb.
+Terminaldan: `python3 tools/report.py` (gcloud application-default girişi lazımdır).
 
 - ✓ göndərildi, ✓✓ çatdırıldı, **mavi ✓✓ oxundu** (WhatsApp kimi)
 - "onlayn", "yazır…", "son görülmə" statusu
