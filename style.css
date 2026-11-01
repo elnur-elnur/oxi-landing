@@ -113,3 +113,34 @@ textarea { flex: 1; border: 0; outline: 0; resize: none; background: transparent
 
 .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #323232; color: #fff; padding: 10px 16px;
   border-radius: 8px; font-size: 14px; z-index: 20; max-width: 90%; text-align: center; }
+
+/* Header düyməsi */
+.peer { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; text-align: left; color: #fff; padding: 0; }
+.attach-btn { color: var(--muted); }
+
+/* Şəkillər */
+.msg.has-img { padding: 3px 3px 5px; }
+.msg.has-img .txt { padding: 4px 5px 0 6px; }
+.msg.has-img .txt.only-meta { position: absolute; right: 8px; bottom: 6px; padding: 0 6px; border-radius: 10px; background: #0007; }
+.msg.has-img .txt.only-meta .meta { margin: 0; top: 0; float: none; color: #fff; }
+.msg.has-img .txt.only-meta .tick:not(.read), .msg.has-img .txt.only-meta .clock { color: #fff; }
+.img-wrap { width: min(300px, 68vw); max-height: 420px; border-radius: 6px; overflow: hidden; background: #0001; }
+.img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
+.img-wrap img.blur { filter: blur(10px); transform: scale(1.1); cursor: default; }
+.viewer { position: fixed; inset: 0; background: #000e; z-index: 30; display: grid; place-items: center; cursor: zoom-out; }
+.viewer img { max-width: 100vw; max-height: 100dvh; object-fit: contain; }
+
+/* Tarixçə */
+.history-card { padding: 16px 16px 8px; max-height: 80dvh; display: flex; flex-direction: column; width: min(420px, 100%); }
+.h-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.h-head h2 { font-size: 17px; margin: 0; }
+.h-head .icon-btn { color: var(--muted); font-size: 18px; }
+.h-list { overflow-y: auto; margin-top: 8px; padding-bottom: 8px; }
+.h-day { font-size: 12.5px; color: var(--muted); margin: 12px 0 4px; font-weight: 600; }
+.h-row { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid #8696a022; font-size: 15px; }
+.h-row .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.h-row.in .dot { background: #25d366; }
+.h-row.out .dot { background: #ea4335; }
+.h-time { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.card .h-head .icon-btn { width: 36px; height: 36px; margin: 0; padding: 0; background: none; color: var(--muted); flex: none; }
+.h-dur { color: var(--muted); font-size: 13px; }

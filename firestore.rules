@@ -5,13 +5,27 @@ service cloud.firestore {
     match /rooms/{room}/messages/{id} {
       allow read: if true;
       allow create: if request.resource.data.text is string
-                    && request.resource.data.text.size() > 0
+                    && (request.resource.data.text.size() > 0 || request.resource.data.img is string)
                     && request.resource.data.text.size() <= 50000
                     && request.resource.data.uid is string
                     && request.resource.data.ts is number;
       // yalnız "çatdırıldı" və "oxundu" qeydləri yenilənə bilər
       allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveredAt', 'readAt']);
       allow delete: if false;
+    }
+    // Şəkillər (sıxılmış JPEG, sənəd daxilində): yalnız əlavə etmək olar
+    match /rooms/{room}/images/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.data is string
+                    && request.resource.data.data.size() <= 900000
+                    && request.resource.data.data.matches('^data:image/jpeg;base64,.*');
+      allow update, delete: if false;
+    }
+    // Giriş / çıxış tarixçəsi: yalnız əlavə etmək olar
+    match /rooms/{room}/visits/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.type in ['in', 'out'] && request.resource.data.at is number;
+      allow update, delete: if false;
     }
     // Onlayn / yazır… statusu
     match /rooms/{room}/presence/{uid} {

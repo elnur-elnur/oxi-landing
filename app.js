@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  collection, doc, addDoc, setDoc, query, orderBy, limit, onSnapshot,
+  collection, doc, addDoc, setDoc, getDoc, getDocs, query, orderBy, limit, onSnapshot,
   serverTimestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -18,6 +18,8 @@ const EMOJIS = [
 const PAGE = 60;           // bir dəfəyə yüklənən mesaj sayı
 const LONG = 1500;         // bundan uzun mesajlar "Daha çox oxu" ilə açılır
 const MAX_LEN = 50000;     // bir mesajın maksimum uzunluğu
+const IMG_MAX = 1600;      // şəklin ən uzun tərəfi (px)
+const IMG_BYTES = 850000;  // Firestore sənədinə sığsın deyə şəklin maksimum ölçüsü
 
 // ---------- yardımçılar ----------
 function store(key, val) {
@@ -128,6 +130,8 @@ function start(me) {
   const msgCol = collection(db, "rooms", room, "messages");
   const presCol = collection(db, "rooms", room, "presence");
   const presRef = doc(presCol, me.uid);
+  const imgCol = collection(db, "rooms", room, "images");
+  const visitCol = collection(db, "rooms", room, "visits");
 
   const list = $("#list"), items = $("#items"), input = $("#input");
   const toBottom = $("#toBottom"), newCount = $("#newCount");
@@ -159,6 +163,7 @@ function start(me) {
         const v = d.data();
         if (typeof v.text !== "string") return;
         arr.push({ id: d.id, text: v.text, uid: v.uid, name: v.name, ts: v.ts || 0,
+          img: v.img || null, w: v.w || 0, h: v.h || 0, thumb: v.thumb || "",
           delivered: !!v.deliveredAt, read: !!v.readAt, pending: d.metadata.hasPendingWrites });
       });
       arr.sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1));
@@ -195,7 +200,8 @@ function start(me) {
       const el = document.createElement("div");
       const txt = document.createElement("div");
       txt.className = "txt";
-      if (onlyEmoji(m.text)) txt.classList.add("big");
+      if (m.img) { el.append(imageEl(m)); el.dataset.img = "1"; if (!m.text) txt.classList.add("only-meta"); }
+      if (!m.img && onlyEmoji(m.text)) txt.classList.add("big");
       if (m.text.length > LONG) {
         fillText(txt, m.text.slice(0, 1000) + "…");
         const rm = document.createElement("button");
@@ -246,7 +252,7 @@ function start(me) {
         prevUid = null;
       }
       const c = getEl(m);
-      const cls = "msg " + (m.uid === me.uid ? "out" : "in") + (m.uid !== prevUid ? " first" : "");
+      const cls = "msg " + (m.uid === me.uid ? "out" : "in") + (m.uid !== prevUid ? " first" : "") + (m.img ? " has-img" : "");
       if (c.el.className !== cls) c.el.className = cls;
       nodes.push(c.el);
       prevDay = dk; prevUid = m.uid;
@@ -313,6 +319,118 @@ function start(me) {
     for (const p of commits) p.catch((e) => { console.warn(e); marked.d.clear(); marked.r.clear(); });
     updateTitle();
   }
+
+  // ----- şəkillər -----
+  const localImgs = new Map();   // öz göndərdiyimiz şəkillər (dərhal görünsün)
+  const imgData = new Map();     // yüklənmiş şəkillərin keşi
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      io.unobserve(e.target);
+      loadFull(e.target);
+    }
+  }, { root: list, rootMargin: "600px 0px" });
+
+  function imageEl(m) {
+    const wrap = document.createElement("div");
+    wrap.className = "img-wrap";
+    const w = m.w || 4, h = m.h || 3;
+    wrap.style.aspectRatio = w + " / " + h;
+    const img = document.createElement("img");
+    img.alt = "şəkil";
+    img.decoding = "async";
+    img.dataset.id = m.img;
+    const local = localImgs.get(m.img) || imgData.get(m.img);
+    if (local) img.src = local;
+    else { if (m.thumb) { img.src = m.thumb; img.className = "blur"; } io.observe(img); }
+    img.onclick = () => { if (!img.classList.contains("blur")) openViewer(img.src); };
+    wrap.append(img);
+    return wrap;
+  }
+
+  async function loadFull(img) {
+    const id = img.dataset.id;
+    try {
+      let data = imgData.get(id);
+      if (!data) {
+        const snap = await getDoc(doc(imgCol, id));
+        data = snap.exists() ? snap.data().data : null;
+        if (data) imgData.set(id, data);
+      }
+      if (data) { img.src = data; img.className = ""; }
+    } catch (e) { console.warn(e); setTimeout(() => io.observe(img), 5000); }
+  }
+
+  function openViewer(src) {
+    const v = $("#viewer");
+    $("#viewerImg").src = src;
+    v.hidden = false;
+  }
+  $("#viewer").addEventListener("click", () => { $("#viewer").hidden = true; $("#viewerImg").removeAttribute("src"); });
+
+  async function compress(file) {
+    let bmp;
+    try { bmp = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+    catch {
+      bmp = await new Promise((res, rej) => {
+        const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file);
+      });
+    }
+    const W = bmp.width, H = bmp.height;
+    const draw = (max, q) => {
+      const k = Math.min(1, max / Math.max(W, H));
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(W * k)); c.height = Math.max(1, Math.round(H * k));
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(bmp, 0, 0, c.width, c.height);
+      return { url: c.toDataURL("image/jpeg", q), w: c.width, h: c.height };
+    };
+    let out = null;
+    for (const [max, q] of [[IMG_MAX, 0.8], [IMG_MAX, 0.65], [1280, 0.6], [1024, 0.55], [800, 0.5], [640, 0.45]]) {
+      out = draw(max, q);
+      if (out.url.length <= IMG_BYTES) break;
+    }
+    if (out.url.length > IMG_BYTES) throw new Error("Şəkil çox böyükdür");
+    const thumb = draw(24, 0.5).url;
+    if (bmp.close) bmp.close();
+    return { ...out, thumb };
+  }
+
+  async function sendImages(files) {
+    const caption = input.value.replace(/^\s*\n+|\s+$/g, "").slice(0, MAX_LEN);
+    let first = true;
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) { toast("Yalnız şəkil göndərmək olar"); continue; }
+      try {
+        const r = await compress(file);
+        const id = rid();
+        localImgs.set(id, r.url);
+        // əvvəlcə şəkil, sonra mesaj — ikisi də offline növbəyə düşür
+        setDoc(doc(imgCol, id), { data: r.url, uid: me.uid, ts: Date.now() })
+          .catch((e) => { console.error(e); toast("Şəkil göndərilmədi: " + (e.code || e.message)); });
+        addDoc(msgCol, { text: first ? caption : "", img: id, w: r.w, h: r.h, thumb: r.thumb,
+          uid: me.uid, name: me.name, ts: Date.now(), createdAt: serverTimestamp() })
+          .catch((e) => { console.error(e); toast("Göndərilmədi: " + (e.code || e.message)); });
+        if (first && caption) { input.value = ""; autoGrow(); }
+        first = false;
+      } catch (e) { console.error(e); toast("Şəkil göndərilmədi: " + e.message); }
+    }
+  }
+
+  const fileInput = $("#fileInput");
+  $("#attachBtn").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", () => { const f = [...fileInput.files]; fileInput.value = ""; if (f.length) sendImages(f); });
+  input.addEventListener("paste", (e) => {
+    const f = [...(e.clipboardData?.files || [])].filter((x) => x.type.startsWith("image/"));
+    if (f.length) { e.preventDefault(); sendImages(f); }
+  });
+  list.addEventListener("dragover", (e) => e.preventDefault());
+  list.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const f = [...(e.dataTransfer?.files || [])].filter((x) => x.type.startsWith("image/"));
+    if (f.length) sendImages(f);
+  });
 
   // ----- göndərmək -----
   function send() {
@@ -427,16 +545,70 @@ function start(me) {
   }
   setInterval(showPeer, 5000);
 
+  // ----- giriş / çıxış tarixçəsi -----
+  let inside = false;
+  function logVisit(type) {
+    if ((type === "in") === inside) return;   // eyni hadisəni iki dəfə yazma
+    inside = type === "in";
+    addDoc(visitCol, { uid: me.uid, name: me.name, type, at: Date.now() }).catch(() => {});
+  }
+  if (document.visibilityState === "visible") logVisit("in");
+
+  async function openHistory() {
+    const box = $("#historyList");
+    $("#history").hidden = false;
+    $("#historyTitle").textContent = (peer && peer.name ? peer.name : "Qarşı tərəf") + " — giriş / çıxış";
+    box.textContent = "Yüklənir…";
+    try {
+      const snap = await getDocs(query(visitCol, orderBy("at", "desc"), limit(300)));
+      const rows = [];
+      snap.forEach((d) => { const v = d.data(); if (v.uid !== me.uid) rows.push(v); });
+      box.textContent = "";
+      if (!rows.length) { box.textContent = "Hələ qeyd yoxdur."; return; }
+      let day = null;
+      const shown = rows.slice(0, 150);
+      const dur = (ms) => { const m = Math.round(ms / 60000); return m < 1 ? "1 dəq-dən az" : m < 60 ? m + " dəq" : Math.floor(m / 60) + " saat " + (m % 60) + " dəq"; };
+      shown.forEach((v, i) => {
+        const dk = dayKey(v.at);
+        if (dk !== day) {
+          day = dk;
+          const h = document.createElement("div");
+          h.className = "h-day"; h.textContent = dayLabel(v.at);
+          box.append(h);
+        }
+        const r = document.createElement("div");
+        r.className = "h-row " + v.type;
+        const dot = document.createElement("span"); dot.className = "dot";
+        const t = document.createElement("span"); t.textContent = v.type === "in" ? "Girdi" : "Çıxdı";
+        const tm = document.createElement("span"); tm.className = "h-time"; tm.textContent = hhmm(v.at);
+        r.append(dot, t);
+        const prev = shown[i + 1];
+        if (v.type === "out" && prev && prev.type === "in") {
+          const d = document.createElement("span"); d.className = "h-dur"; d.textContent = "· " + dur(v.at - prev.at) + " qaldı";
+          r.append(d);
+        }
+        r.append(tm);
+        box.append(r);
+      });
+    } catch (e) { box.textContent = "Xəta: " + (e.code || e.message); }
+  }
+  $("#peerInfo").addEventListener("click", openHistory);
+  $("#historyClose").addEventListener("click", () => { $("#history").hidden = true; });
+  $("#history").addEventListener("click", (e) => { if (e.target.id === "history") $("#history").hidden = true; });
+
   beat();
   setInterval(() => { if (document.visibilityState === "visible") beat(); }, 30000);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible") typingOn = false;
+    const vis = document.visibilityState === "visible";
+    if (!vis) typingOn = false;
+    logVisit(vis ? "in" : "out");
     beat();
     markSeen();
   });
   window.addEventListener("focus", markSeen);
   window.addEventListener("blur", updateTitle);
-  window.addEventListener("pagehide", () => beat({ online: false, typing: false }));
+  window.addEventListener("pagehide", () => { logVisit("out"); beat({ online: false, typing: false }); });
+  window.addEventListener("pageshow", (e) => { if (e.persisted && document.visibilityState === "visible") { logVisit("in"); beat(); } });
 
   $("#renameBtn").addEventListener("click", () => {
     askName((name) => { me.name = name; store("chat_me", me); beat(); toast("Adın dəyişdi: " + name); }, me.name);

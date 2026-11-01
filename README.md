@@ -6,9 +6,13 @@ Bir səhifəlik, login/parolsuz çat. Linkə basan adını yazır və dərhal ya
 - "onlayn", "yazır…", "son görülmə" statusu
 - Uzun mesajlar (50 000 simvola qədər), çox uzun olanlar "Daha çox oxu" ilə açılır
 - 40 smaylik paneli
+- 📎 **Şəkil göndərmək** (bir neçəsini birdən, şəkil altı yazı ilə; kompüterdə Ctrl+V ilə yapışdırmaq və sürükləyib atmaq da olur). Şəkillər avtomatik sıxılır, toxunanda tam ekranda açılır
+- **Giriş / çıxış tarixçəsi:** yuxarıda qarşı tərəfin adına toxun — nə vaxt girib, nə vaxt çıxıb, neçə dəqiqə qalıb görünür
 - Mesajlar silinmir (verilənlər bazası qaydaları silməyə icazə vermir)
 - Tez işləyir: son 60 mesaj yüklənir, yuxarı sürüşdürdükcə köhnələr gəlir; mesajlar telefonda keşlənir
 - Linklər kliklənir, gecə rejimi avtomatik
+
+Şəkillər də Firestore-da saxlanılır (Firebase Storage pullu plan istədiyi üçün istifadə olunmur), ona görə əlavə heç nə qurmaq lazım deyil.
 
 Hər şey **pulsuzdur**: verilənlər bazası Firebase Firestore (pulsuz Spark planı — 1 GB yer, gündə 50 000 oxuma / 20 000 yazma, 2 nəfər üçün kifayətdən çoxdur), hosting GitHub Pages və ya Firebase Hosting.
 
