@@ -105,9 +105,22 @@ function browserLabel() {
 
 // ---------- iki nəfər: Elish və Nurush ----------
 const PEOPLE = {
-  elish:  { uid: "elish",  name: "Elish",  avatar: "elish.svg" },
-  nurush: { uid: "nurush", name: "Nurush", avatar: "nurush.svg" }
+  elish:  { uid: "elish",  name: "Elish",  avatar: "elish.svg",
+            photo: "https://news.milli.az/media/n/0d/c/http_95.86.135.60_bpictures_picture53798.jpg" },
+  nurush: { uid: "nurush", name: "Nurush", avatar: "nurush.svg",
+            photo: "https://www.gullerim.az/storage/buketler/006.jpg" }
 };
+// Profil şəklini qoy: əvvəl çəkilmiş SVG görünür, foto yüklənsə onunla əvəzlənir (yüklənməsə SVG qalır)
+function setAvatar(el, person) {
+  el.textContent = "";
+  el.style.backgroundImage = `url("${person.avatar}")`;
+  if (!person.photo) return;
+  const probe = new Image();
+  try { probe.referrerPolicy = "no-referrer"; } catch {}
+  probe.onload = () => { el.style.backgroundImage = `url("${person.photo}")`; };
+  probe.onerror = () => {};
+  probe.src = person.photo;
+}
 const other = (uid) => (uid === "elish" ? PEOPLE.nurush : PEOPLE.elish);
 
 // ---------- başlanğıc ----------
@@ -565,8 +578,7 @@ function start(me, db, room) {
   }, () => {});
 
   $("#peerName").textContent = peerInfo.name;
-  $("#avatar").style.backgroundImage = `url(${peerInfo.avatar})`;
-  $("#avatar").textContent = "";
+  setAvatar($("#avatar"), peerInfo);
   function showPeer() {
     const stEl = $("#peerStatus");
     if (!peer) { stEl.textContent = "hələ qoşulmayıb"; return; }
@@ -627,7 +639,7 @@ function start(me, db, room) {
   window.addEventListener("pagehide", () => { logVisit("out"); beat({ online: false, typing: false }); });
   window.addEventListener("pageshow", (e) => { if (e.persisted && document.visibilityState === "visible") { logVisit("in"); beat(); } });
 
-  $("#meAvatar").style.backgroundImage = `url(${me.avatar})`;
+  setAvatar($("#meAvatar"), me);
   $("#meAvatar").title = "Sən: " + me.name;
 
   subscribe();
