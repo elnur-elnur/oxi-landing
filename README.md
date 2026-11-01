@@ -1,7 +1,7 @@
 # 💬 Çat — 2 nəfərlik WhatsApp kimi mesajlaşma
 
 Bir səhifəlik, login/parolsuz, yalnız iki nəfərlik çat: **Elish** 🐺 və **Nurush** 🌹.
-Linki ilk açan cihaz avtomatik Elish olur, ikinci açan Nurush. Ad və profil şəkli sabitdir, dəyişdirilmir.
+Link: **https://menim-icadim.web.app** (dəyişmir). Linki ilk açan cihaz avtomatik Elish olur, ikinci açan Nurush. Ad və profil şəkli sabitdir, dəyişdirilmir.
 Heç nə soruşulmur: Elish tutulandan sonra linki açan hər yeni cihaz avtomatik Nurush olur.
 Elish öz başqa cihazından girmək üçün linkin sonuna `#elish` yazır (bir dəfə; sonra yadda qalır).
 
@@ -10,7 +10,8 @@ Terminaldan: `python3 tools/report.py` (gcloud application-default girişi lazı
 
 - ✓ göndərildi, ✓✓ çatdırıldı, **mavi ✓✓ oxundu** (WhatsApp kimi)
 - "onlayn", "yazır…", "son görülmə" statusu
-- Uzun mesajlar (50 000 simvola qədər), çox uzun olanlar "Daha çox oxu" ilə açılır
+- Uzun mesajlar (100 000 simvola qədər); 1500 simvoldan uzunlar "Daha çox oxu ▼" ilə açılır, "Bağla ▲" ilə yığılır
+- Nurush yeni IP-dən və ya yeni brauzerdən girəndə Elish-ə xəbərdarlıq çıxır (bloklanmır)
 - 40 smaylik paneli
 - 📎 **Şəkil göndərmək** (bir neçəsini birdən, şəkil altı yazı ilə; kompüterdə Ctrl+V ilə yapışdırmaq və sürükləyib atmaq da olur). Şəkillər avtomatik sıxılır, toxunanda tam ekranda açılır
 - **Giriş / çıxış tarixçəsi:** yuxarıda qarşı tərəfin adına toxun — nə vaxt girib, nə vaxt çıxıb, neçə dəqiqə qalıb görünür

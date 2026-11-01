@@ -17,7 +17,7 @@ const EMOJIS = [
 
 const PAGE = 60;           // bir dəfəyə yüklənən mesaj sayı
 const LONG = 1500;         // bundan uzun mesajlar "Daha çox oxu" ilə açılır
-const MAX_LEN = 50000;     // bir mesajın maksimum uzunluğu
+const MAX_LEN = 100000;    // bir mesajın maksimum uzunluğu (simvol)
 const IMG_MAX = 1600;      // şəklin ən uzun tərəfi (px)
 const IMG_BYTES = 850000;  // Firestore sənədinə sığsın deyə şəklin maksimum ölçüsü
 
@@ -92,6 +92,17 @@ function icon(kind) {
   return s;
 }
 
+function browserLabel() {
+  const u = navigator.userAgent;
+  const os = /iPhone/.test(u) ? "iPhone" : /iPad/.test(u) ? "iPad" : /Android/.test(u) ? "Android" : /Windows/.test(u) ? "Windows"
+    : /Mac OS X/.test(u) ? "Mac" : /Linux/.test(u) ? "Linux" : "Digər";
+  const b = /Instagram/.test(u) ? "Instagram" : /FBAN|FBAV/.test(u) ? "Facebook" : /WhatsApp/.test(u) ? "WhatsApp"
+    : /Telegram/.test(u) ? "Telegram" : /Edg(A|iOS)?\//.test(u) ? "Edge" : /OPR|Opera/.test(u) ? "Opera"
+    : /SamsungBrowser/.test(u) ? "Samsung" : /YaBrowser/.test(u) ? "Yandex" : /CriOS|Chrome/.test(u) ? "Chrome"
+    : /FxiOS|Firefox/.test(u) ? "Firefox" : /Safari/.test(u) ? "Safari" : "Brauzer";
+  return b + " · " + os;
+}
+
 // ---------- iki nəfər: Elish və Nurush ----------
 const PEOPLE = {
   elish:  { uid: "elish",  name: "Elish",  avatar: "elish.svg" },
@@ -121,7 +132,15 @@ async function boot() {
   const key = "chat_role_" + room;
   let role = store(key);
   // Elish-in öz digər cihazları üçün: linkin sonuna #elish
-  if (location.hash === "#elish") { role = "elish"; history.replaceState(null, "", location.pathname + location.search); }
+  if (location.hash === "#elish") {
+    role = "elish";
+    history.replaceState(null, "", location.pathname + location.search);
+    runTransaction(db, async (tx) => {
+      const ref = doc(db, "rooms", room, "meta", "roles");
+      const snap = await tx.get(ref);
+      if (!snap.exists() || !snap.data().elish) tx.set(ref, { elish: Date.now() }, { merge: true });
+    }).catch(() => {});
+  }
   if (!PEOPLE[role]) {
     // Heç nə soruşulmur: ilk girən Elish, ondan sonra girən hər kəs Nurush
     try {
@@ -147,6 +166,7 @@ function start(me, db, room) {
   const presRef = doc(presCol, me.uid);
   const imgCol = collection(db, "rooms", room, "images");
   const visitCol = collection(db, "rooms", room, "visits");
+  const devCol = collection(db, "rooms", room, "devices");
 
   const list = $("#list"), items = $("#items"), input = $("#input");
   const toBottom = $("#toBottom"), newCount = $("#newCount");
@@ -217,23 +237,28 @@ function start(me, db, room) {
       txt.className = "txt";
       if (m.img) { el.append(imageEl(m)); el.dataset.img = "1"; if (!m.text) txt.classList.add("only-meta"); }
       if (!m.img && onlyEmoji(m.text)) txt.classList.add("big");
-      if (m.text.length > LONG) {
-        fillText(txt, m.text.slice(0, 1000) + "…");
-        const rm = document.createElement("button");
-        rm.className = "readmore";
-        rm.textContent = "Daha çox oxu";
-        rm.onclick = () => { fillText(txt, m.text); txt.append(meta); };
-        txt.append(rm);
-      } else {
-        fillText(txt, m.text);
-      }
       const meta = document.createElement("span");
       meta.className = "meta";
       const time = document.createElement("span");
       time.textContent = hhmm(m.ts);
       meta.append(time);
-      // vaxt + quşlar mətnin sonunda, WhatsApp kimi sağ altda
-      txt.append(meta);
+      if (m.text.length > LONG) {
+        // uzun mesaj: "Daha çox oxu" ilə açılır, "Bağla" ilə yığılır
+        let open = false;
+        const rm = document.createElement("button");
+        rm.className = "readmore";
+        const draw = () => {
+          fillText(txt, open ? m.text : m.text.slice(0, 1000) + "… ");
+          rm.textContent = open ? " Bağla ▲" : "Daha çox oxu ▼";
+          txt.append(rm, meta);
+        };
+        rm.onclick = () => { open = !open; draw(); if (!open) el.scrollIntoView({ block: "nearest" }); };
+        draw();
+      } else {
+        fillText(txt, m.text);
+        // vaxt + quşlar mətnin sonunda, WhatsApp kimi sağ altda
+        txt.append(meta);
+      }
       el.append(txt);
       c = { el, meta, state: null };
       cache.set(m.id, c);
@@ -554,12 +579,61 @@ function start(me, db, room) {
   let inside = false;
   let dev = store("chat_dev");
   if (!dev) { dev = rid(); store("chat_dev", dev); }
+  const br = browserLabel();
+  let ipP = null;
+  const getIp = () => (ipP ||= fetch("https://api.ipify.org?format=json", AbortSignal.timeout ? { signal: AbortSignal.timeout(5000) } : {})
+    .then((r) => r.json()).then((j) => j.ip || null).catch(() => { ipP = null; return null; }));
+
   function logVisit(type) {
     if ((type === "in") === inside) return;   // eyni hadisəni iki dəfə yazma
     inside = type === "in";
-    addDoc(visitCol, { uid: me.uid, name: me.name, dev, type, at: Date.now() }).catch(() => {});
+    const at = Date.now();
+    if (type === "out") { addDoc(visitCol, { uid: me.uid, name: me.name, dev, type, at }).catch(() => {}); return; }
+    getIp().then((ip) => addDoc(visitCol, { uid: me.uid, name: me.name, dev, type, at, ip, br }).catch(() => {}));
   }
   if (document.visibilityState === "visible") logVisit("in");
+
+  // ----- yeni IP / brauzer qeydiyyatı -----
+  const slug = (x) => String(x).replace(/[^\w.-]+/g, "_").slice(0, 100);
+  async function registerDevice() {
+    const ip = await getIp();
+    const items = [["br", br]];
+    if (ip) items.push(["ip", ip]);
+    for (const [type, value] of items) {
+      const ref = doc(devCol, me.uid + "_" + type + "_" + slug(value));
+      try {
+        const snap = await getDoc(ref);
+        if (!snap.exists()) await setDoc(ref, { uid: me.uid, type, value, ip: ip || null, br, first: Date.now() });
+      } catch (e) { console.warn(e); }
+    }
+  }
+  registerDevice();
+
+  // Yalnız Elish-ə: Nurush yeni IP və ya brauzerdən girəndə xəbər ver
+  let peerDevices = [];
+  onSnapshot(query(devCol, where("uid", "==", peerInfo.uid)), (snap) => {
+    peerDevices = [];
+    snap.forEach((d) => peerDevices.push(d.data()));
+    peerDevices.sort((a, b) => a.first - b.first);
+    if (me.uid === "elish") showDeviceAlert();
+  }, () => {});
+  function showDeviceAlert() {
+    const ack = store("chat_dev_ack") || 0;
+    const fresh = [];
+    for (const type of ["ip", "br"]) {
+      const list = peerDevices.filter((d) => d.type === type);
+      list.slice(1).forEach((d) => { if (d.first > ack) fresh.push(d); });   // ilk IP/brauzer normaldır, sonrakılar "yeni"dir
+    }
+    const box = $("#alert");
+    if (!fresh.length) { box.hidden = true; return; }
+    fresh.sort((a, b) => a.first - b.first);
+    $("#alertText").textContent = fresh.map((d) =>
+      `${peerInfo.name} yeni ${d.type === "ip" ? "IP-dən" : "brauzerdən"} girdi: ${d.value}` +
+      (d.type === "ip" && d.br ? ` (${d.br})` : d.type === "br" && d.ip ? ` (IP ${d.ip})` : "") +
+      ` — ${dayLabel(d.first).toLowerCase()} ${hhmm(d.first)}`).join("\n");
+    box.hidden = false;
+    $("#alertOk").onclick = () => { store("chat_dev_ack", Math.max(...fresh.map((d) => d.first))); box.hidden = true; };
+  }
 
   async function openHistory() {
     const box = $("#historyList");
@@ -583,7 +657,7 @@ function start(me, db, room) {
       const raw = [], openBy = {};
       for (const v of ev) {
         const k = v.dev || "x";
-        if (v.type === "in") { if (openBy[k]) openBy[k].end = openBy[k].end || v.at; openBy[k] = { start: v.at, end: null }; raw.push(openBy[k]); }
+        if (v.type === "in") { if (openBy[k]) openBy[k].end = openBy[k].end || v.at; openBy[k] = { start: v.at, end: null, ip: v.ip, br: v.br }; raw.push(openBy[k]); }
         else if (openBy[k] && !openBy[k].end) { openBy[k].end = v.at; openBy[k] = null; }
       }
       const lastStart = raw.length ? Math.max(...raw.map((x) => x.start)) : 0;
@@ -626,6 +700,10 @@ function start(me, db, room) {
       box.append(el("div", "s-line", online ? "🟢 İndi onlayndır" : (peer && peer.at ? "⚪ " + lastSeenLabel(peer.at) : "⚪ Hələ heç girməyib")));
       if (lastRead) box.append(el("div", "s-line", "👁 Son dəfə mesaj oxuyub: " + dayLabel(lastRead).toLowerCase() + " " + hhmm(lastRead)));
 
+      if (peerDevices.length) {
+        box.append(el("div", "h-day", "IP-lər və brauzerlər"));
+        for (const d of peerDevices) box.append(el("div", "h-sub dev", (d.type === "ip" ? "🌐 " : "📱 ") + d.value + " — ilk dəfə " + dayLabel(d.first).toLowerCase() + " " + hhmm(d.first)));
+      }
       if (!sessions.length) { box.append(el("div", "s-line", "Giriş qeydi hələ yoxdur.")); return; }
       let day = null;
       for (const x of sessions.slice().reverse().slice(0, 200)) {
@@ -635,6 +713,7 @@ function start(me, db, room) {
         r.append(el("span", "dot"), el("span", "", hhmm(x.start) + " – " + (x.open ? "indi" : hhmm(x.end))));
         r.append(el("span", "h-dur", dur(x.end - x.start) + (x.reads ? " · " + x.reads + " mesaj oxudu" : "")));
         box.append(r);
+        if (x.ip || x.br) box.append(el("div", "h-sub", [x.br, x.ip].filter(Boolean).join(" · ")));
       }
     } catch (e) { console.error(e); box.textContent = "Xəta: " + (e.code || e.message); }
   }

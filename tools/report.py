@@ -79,3 +79,12 @@ print(f"Nurush-un yazdığı mesajlar: {len(hers)}" + (f", sonuncu {t(hers[-1]['
 print("\nGirişlər (son 30):")
 for s in sessions[-30:]:
     print(f"  {t(s['start'])} – {t(s['end'])[6:]}  ({dur(s['end']-s['start'])})" + (f"  · {s['reads']} mesaj oxudu" if s['reads'] else ""))
+
+devs = sorted([d for d in docs("devices") if d.get("uid") == "nurush"], key=lambda d: d.get("first", 0))
+if devs:
+    print("\nIP-lər və brauzerlər (ilk görünmə):")
+    seen = {"ip": 0, "br": 0}
+    for d in devs:
+        seen[d["type"]] += 1
+        tag = "  ⚠️ YENİ" if seen[d["type"]] > 1 else ""
+        print(f"  {'🌐 IP' if d['type']=='ip' else '📱 Brauzer'}: {d['value']}  — {t(d['first'])}{tag}")

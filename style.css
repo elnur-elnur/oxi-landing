@@ -161,3 +161,14 @@ textarea { flex: 1; border: 0; outline: 0; resize: none; background: transparent
 .s-small { font-size: 12.5px; margin-top: 4px; }
 .s-line { font-size: 14px; margin: 6px 2px; }
 .h-row .h-dur { margin-left: auto; }
+
+/* Uzun mesaj */
+.readmore { display: inline; color: var(--link); font-weight: 600; padding: 0; font-size: 14px; }
+/* Yeni IP / brauzer xəbərdarlığı */
+.alert { flex: none; display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; background: #fff3cd; color: #5c4400;
+  font-size: 13.5px; white-space: pre-line; border-bottom: 1px solid #0001; z-index: 2; }
+.alert div { flex: 1; }
+.alert button { background: #5c4400; color: #fff; border-radius: 14px; padding: 4px 12px; font-size: 13px; flex: none; }
+@media (prefers-color-scheme: dark) { .alert { background: #3d3412; color: #ffe08a; } .alert button { background: #ffe08a; color: #3d3412; } }
+.h-sub { font-size: 12px; color: var(--muted); margin: -4px 0 4px 24px; }
+.h-sub.dev { margin: 4px 0; font-size: 13px; }

@@ -13,6 +13,7 @@
       ".git/**",
       "**/.*",
       "**/node_modules/**"
-    ]
+    ],
+    "site": "menim-icadim"
   }
 }

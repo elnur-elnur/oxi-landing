@@ -6,7 +6,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.resource.data.text is string
                     && (request.resource.data.text.size() > 0 || request.resource.data.img is string)
-                    && request.resource.data.text.size() <= 50000
+                    && request.resource.data.text.size() <= 100000
                     && request.resource.data.uid is string
                     && request.resource.data.ts is number;
       // yalnız "çatdırıldı" və "oxundu" qeydləri yenilənə bilər
@@ -34,6 +34,12 @@ service cloud.firestore {
       allow update: if request.resource.data.diff(resource.data).changedKeys().size() == 0
                     && request.resource.data.diff(resource.data).removedKeys().size() == 0;
       allow delete: if false;
+    }
+    // Hansı IP və brauzerlərdən girilib: yalnız əlavə etmək olar
+    match /rooms/{room}/devices/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.type in ['ip', 'br'] && request.resource.data.first is number;
+      allow update, delete: if false;
     }
     // Onlayn / yazır… statusu
     match /rooms/{room}/presence/{uid} {
