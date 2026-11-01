@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Mesajlar: hər kəs oxuya və yaza bilər, amma heç kim SİLƏ və ya mətni DƏYİŞƏ bilməz
+    match /rooms/{room}/messages/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() <= 50000
+                    && request.resource.data.uid is string
+                    && request.resource.data.ts is number;
+      // yalnız "çatdırıldı" və "oxundu" qeydləri yenilənə bilər
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveredAt', 'readAt']);
+      allow delete: if false;
+    }
+    // Onlayn / yazır… statusu
+    match /rooms/{room}/presence/{uid} {
+      allow read, write: if true;
+    }
+  }
+}
